@@ -1,0 +1,22 @@
+﻿
+@{
+    ViewBag.Title = "Populate";
+}
+
+<h2>@ViewBag.Title</h2>
+
+<p>
+    Enter a full or partial movie name, all matching movies will be added to the DB.
+    @using (Html.BeginForm("Populate", "Movies", FormMethod.Post))
+    {
+    <p>
+        Movie Name: @Html.TextBox("SearchString")
+        <br />
+        Choose a protocol:
+        @Html.RadioButton("Protocol", "XML", true) XML
+        @Html.RadioButton("Protocol", "JSON") JSON
+        <br />
+        <input class="btn btn-success" type="submit" value="Populate" />
+    </p>
+    }
+    </p>

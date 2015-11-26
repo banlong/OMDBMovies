@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using System.Net;
 using System.Web.Mvc;
 using omdbCommon;
+using omdbWeb.Models;
 
 namespace omdbWeb.Controllers
 {
@@ -10,7 +11,41 @@ namespace omdbWeb.Controllers
     {
         private MoviesContext db = new MoviesContext();
 
-        
+        // GET: Movies/Populate
+        public ActionResult Populate()
+        {
+            return View();
+        }
+
+        // Post: Movies/Populate
+        [HttpPost]
+        public async Task<ActionResult> Populate(string SearchString, string Protocol)
+        {
+            //get data from omdbapi.com
+            Repository repo = new Repository();
+            var movies = repo.GetMovies(SearchString, Protocol);
+
+            //create SQL entry
+            db.Database.ExecuteSqlCommand("TRUNCATE TABLE Movies");
+            await db.SaveChangesAsync();
+
+            if (movies != null)
+            {
+                db.Movies.AddRange(movies);
+                await db.SaveChangesAsync();
+
+                //send msg to queue
+                repo.AppendToAzueQueue(movies, "banlongqueue");
+
+                //return view with data
+                return View("Index", await db.Movies.ToListAsync());
+            }
+            else
+            {
+                return View();
+            }
+        }
+
         // GET: Movies
         public async Task<ActionResult> Index()
         {
