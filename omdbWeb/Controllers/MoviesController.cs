@@ -11,6 +11,14 @@ namespace omdbWeb.Controllers
     {
         private MoviesContext db = new MoviesContext();
 
+        // GET: Movies/DeleteAll
+        public async Task<ActionResult> DeleteAll() {
+            //create SQL entry
+            db.Database.ExecuteSqlCommand("TRUNCATE TABLE Movies");
+            db.SaveChanges();
+            return View("Index", await db.Movies.ToListAsync());
+        }
+
         // GET: Movies/Populate
         public ActionResult Populate()
         {
@@ -25,17 +33,12 @@ namespace omdbWeb.Controllers
             Repository repo = new Repository();
             var movies = repo.GetMovies(SearchString, Protocol);
 
-            //create SQL entry
-            db.Database.ExecuteSqlCommand("TRUNCATE TABLE Movies");
-            await db.SaveChangesAsync();
-
             if (movies != null)
             {
                 db.Movies.AddRange(movies);
                 await db.SaveChangesAsync();
-
                 //send msg to queue
-                repo.AppendToAzueQueue(movies, "banlongqueue");
+                repo.AppendToAzueQueue(movies, AppConfiguration.QueueName);
 
                 //return view with data
                 return View("Index", await db.Movies.ToListAsync());

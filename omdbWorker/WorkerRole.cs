@@ -1,62 +1,90 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Net;
-using System.Threading;
-using Microsoft.ServiceBus;
+﻿using Microsoft.ServiceBus;
 using Microsoft.ServiceBus.Messaging;
 using Microsoft.WindowsAzure;
 using Microsoft.WindowsAzure.ServiceRuntime;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
+using omdbCommon;
+using System;
+using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Web;
 
 namespace omdbWorker
 {
     public class WorkerRole : RoleEntryPoint
     {
-        // The name of your queue
-        const string QueueName = "ProcessingQueue";
-
-        // QueueClient is thread-safe. Recommended that you cache 
-        // rather than recreating it on every request
-        QueueClient Client;
+        
+        private CloudBlobContainer imagesBlobContainer;
+        private MoviesContext db;
+        private QueueClient Client;
         ManualResetEvent CompletedEvent = new ManualResetEvent(false);
+        
 
-        public override void Run()
-        {
+        public override void Run(){
             Trace.WriteLine("Starting processing of messages");
-
-            // Initiates the message pump and callback is invoked for each message that is received, calling close on the client will stop the pump.
-            Client.OnMessage((receivedMessage) =>
-                {
-                    try
-                    {
-                        // Process the message
-                        Trace.WriteLine("Processing Service Bus message: " + receivedMessage.SequenceNumber.ToString());
+             
+            BrokeredMessage msg = null;
+            while (true){
+                try{
+                   
+                    msg = Client.Receive();
+                    if (msg != null){
+                        ProcessQueueMessage(msg);
+                        
+                    } else {
+                        Thread.Sleep(1000);
                     }
-                    catch
-                    {
-                        // Handle any message processing specific exceptions here
-                    }
-                });
-
-            CompletedEvent.WaitOne();
+                }catch (StorageException e){
+                    Trace.TraceError("Deleting poison queue item: '{0}'", msg.Label);
+                }
+            }
         }
 
-        public override bool OnStart()
-        {
+        public override bool OnStart(){
             // Set the maximum number of concurrent connections 
             ServicePointManager.DefaultConnectionLimit = 12;
 
+            // Connect to the database 
+            var dbConnString = CloudConfigurationManager.GetSetting("omdbDbConnectionString");
+            db = new MoviesContext(dbConnString);
+
             // Create the queue if it does not exist already
+            Trace.TraceInformation("Creating images queue");
             string connectionString = CloudConfigurationManager.GetSetting("Microsoft.ServiceBus.ConnectionString");
             var namespaceManager = NamespaceManager.CreateFromConnectionString(connectionString);
-            if (!namespaceManager.QueueExists(QueueName))
+            if (!namespaceManager.QueueExists(AppConfiguration.QueueName))
             {
-                namespaceManager.CreateQueue(QueueName);
+                namespaceManager.CreateQueue(AppConfiguration.QueueName);
             }
 
             // Initialize the connection to Service Bus Queue
-            Client = QueueClient.CreateFromConnectionString(connectionString, QueueName);
+            Client = QueueClient.CreateFromConnectionString(connectionString, AppConfiguration.QueueName);
+            
+            // Open storage account using credentials from .cscfg file.
+            var storageAccount = CloudStorageAccount.Parse
+                (RoleEnvironment.GetConfigurationSettingValue("StorageConnectionString"));
+
+            Trace.TraceInformation("Creating images blob container");
+            var blobClient = storageAccount.CreateCloudBlobClient();
+            imagesBlobContainer = blobClient.GetContainerReference(AppConfiguration.BlobContainerName);
+            if (imagesBlobContainer.CreateIfNotExists()){
+                // Enable public access on the newly created "images" container.
+                imagesBlobContainer.SetPermissions(
+                    new BlobContainerPermissions
+                    {
+                        PublicAccess = BlobContainerPublicAccessType.Blob
+                    });
+            }
+
+            Trace.TraceInformation("Storage initialized");
             return base.OnStart();
         }
 
@@ -67,5 +95,168 @@ namespace omdbWorker
             CompletedEvent.Set();
             base.OnStop();
         }
+
+        private void ProcessQueueMessage(BrokeredMessage msg){
+            Trace.TraceInformation("Processing queue message {0}", msg);
+            //GET MESSAGE CONTENT.
+            string appId = AppConfiguration.ApplicationId;//msg.Properties["appId"].ToString();
+            string imdbId = msg.Properties["imdbId"].ToString();
+            string remoteFileUrl = msg.Properties["Poster"].ToString();
+            var movieId = int.Parse(msg.Properties["MovieId"].ToString());
+
+            //CHECK: recognize the app id? fail- abandon this message
+            if (appId != AppConfiguration.ApplicationId){
+                msg.Abandon();
+                return;
+            }
+
+            //CHECK: IF no image URL, or no MovieId in the sql database, fail- delete this message
+            Movie m = db.Movies.Find(movieId);          
+            if (remoteFileUrl == "" | remoteFileUrl == null | m == null)
+            {
+                msg.Complete();
+                return;
+            }
+
+            //GET REFERENCE TO THE ITEM IN DATABASE
+            var imdbIdList = db.Movies.AsQueryable();
+            imdbIdList = imdbIdList.Where(a => a.imdbID == imdbId);
+            int itemCount = imdbIdList.Count();
+
+            //CHECK - if no imdbId found, , fail- delete this message
+            if (itemCount == 0){
+                msg.Complete();
+                return;
+            }
+            //CHECK - if there is more than one imdbId found (ie duplicate movies info), delete duplicate records
+            else if (itemCount > 1)
+            {
+                //remove duplicate item
+                //deleteDuplicate(imdbId);
+                msg.Complete();
+                return;
+            }
+            else if (itemCount == 1) {
+                //DEFINE BLOB NAME
+                Uri blobUri = new Uri(remoteFileUrl);
+                string blobName = blobUri.Segments[blobUri.Segments.Length - 1];
+                CloudBlockBlob posterBlob = imagesBlobContainer.GetBlockBlobReference(blobName);             
+                posterBlob.Properties.ContentType = "image/jpeg";
+
+                //DEFINE THUMB NAME
+                string thumbName = Path.GetFileNameWithoutExtension(posterBlob.Name) + "thumb.jpg";
+                CloudBlockBlob thumbBlob = imagesBlobContainer.GetBlockBlobReference(thumbName);
+                thumbBlob.Properties.ContentType = "image/jpeg";
+                
+
+                //DOWNLOAD IMAGE FILE
+                Trace.TraceInformation("Download poster from remote web site");
+                getImageFile(blobName, remoteFileUrl);
+                if (!File.Exists(@blobName)){
+                    msg.Complete();
+                    return;
+                }
+
+                //UPLOAD IMAGE TO BLOB, THEN DELETE FILE
+                using (var fileStream = File.OpenRead(@blobName))
+                {
+                    posterBlob.UploadFromStream(fileStream);
+                    fileStream.Dispose();
+                    File.Delete(@blobName);
+                }
+
+                //CREATE THUMBBLOB FROM POSTERBLOB
+                Trace.TraceInformation("Generate thumbnail in blob {0}", thumbName);
+                using (Stream input = posterBlob.OpenRead())
+                using (Stream output = thumbBlob.OpenWrite())
+                {
+                    ConvertImageToThumbnailJPG(input, output);
+                    thumbBlob.Properties.ContentType = "image/jpeg";
+                }
+                
+                
+                //UPDATE THE URL IN SQL DB
+                var movie = (from mv in db.Movies
+                             where mv.imdbID == imdbId
+                             select mv).Single();
+
+                movie.ImageURL = posterBlob.Uri.ToString();
+                movie.ThumbnailURL = thumbBlob.Uri.ToString();
+                db.SaveChanges();
+
+                msg.Complete();
+            }
+        }
+
+        public void ConvertImageToThumbnailJPG(Stream input, Stream output)
+        {
+            int thumbnailsize = 80;
+            int width;
+            int height;
+            var originalImage = new Bitmap(input);
+
+            if (originalImage.Width > originalImage.Height)
+            {
+                width = thumbnailsize;
+                height = thumbnailsize * originalImage.Height / originalImage.Width;
+            }
+            else
+            {
+                height = thumbnailsize;
+                width = thumbnailsize * originalImage.Width / originalImage.Height;
+            }
+
+            Bitmap thumbnailImage = null;
+            try
+            {
+                thumbnailImage = new Bitmap(width, height);
+
+                using (Graphics graphics = Graphics.FromImage(thumbnailImage))
+                {
+                    graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                    graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                    graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                    graphics.DrawImage(originalImage, 0, 0, width, height);
+                }
+
+                thumbnailImage.Save(output, ImageFormat.Jpeg);
+            }
+            finally
+            {
+                if (thumbnailImage != null)
+                {
+                    thumbnailImage.Dispose();
+                }
+            }
+        }
+
+       
+
+        //Save image from URL to approot folder
+        //In this project: omdbMovies\csx\Debug\roles\omdbWorker\approot
+        public void getImageFile(string file_name, string url) {
+            byte[] content;
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+            WebResponse response = request.GetResponse();
+
+            Stream stream = response.GetResponseStream();
+
+            using (BinaryReader br = new BinaryReader(stream)) {
+                content = br.ReadBytes(500000);
+                br.Close();
+            }
+            response.Close();
+
+            FileStream fs = new FileStream(file_name, FileMode.Create);
+            BinaryWriter bw = new BinaryWriter(fs);
+            try {
+                bw.Write(content);
+            }finally{
+                fs.Close();
+                bw.Close();
+            }
+        }
+
     }
 }
+

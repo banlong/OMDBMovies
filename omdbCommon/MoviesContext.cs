@@ -2,6 +2,7 @@
 
 namespace omdbCommon
 {
+    
     public class MoviesContext : DbContext{
 
         public MoviesContext() : base("name=MoviesContext"){
@@ -11,8 +12,7 @@ namespace omdbCommon
         public MoviesContext(string connString) : base(connString){
         }
 
-        public System.Data.Entity.DbSet<Movie> Movies { get; set; }
-
+        public DbSet<Movie> Movies { get; set; }
     }
 
 }

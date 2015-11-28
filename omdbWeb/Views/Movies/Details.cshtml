@@ -41,6 +41,14 @@
         <dd>
             @Html.DisplayFor(model => model.imdbID)
         </dd>
+        
+        <dt>
+            Image
+        </dt>
+
+        <dd>
+            <img src="@Html.Raw(Model.ImageURL)" />
+        </dd>
 
         <dt>
             @Html.DisplayNameFor(model => model.Poster)
@@ -61,6 +69,10 @@
         <dt>
             @Html.DisplayNameFor(model => model.ThumbnailURL)
         </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.ThumbnailURL)
+        </dd>
 
         <dd>
             @Html.DisplayFor(model => model.ThumbnailURL)

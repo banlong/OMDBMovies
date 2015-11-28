@@ -1,11 +1,13 @@
 ﻿using Microsoft.ServiceBus.Messaging;
 using Microsoft.WindowsAzure;
 using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Table;
 using omdbCommon;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Diagnostics;
 using System.Net;
 
 namespace omdbWeb.Models
@@ -14,13 +16,13 @@ namespace omdbWeb.Models
 
     public class Repository
     {
-        private Dictionary<string, IMovieParser> _parsers = new Dictionary<string, IMovieParser>();
+        private Dictionary<string, IMovieParser> parsers = new Dictionary<string, IMovieParser>();
         private MoviesContext db = new MoviesContext();
 
         public Repository()
         {
-            _parsers.Add("xml", new XmlMovieParser());
-            _parsers.Add("json", new JSONMovieParser());
+            parsers.Add("xml", new XmlMovieParser());
+            parsers.Add("json", new JSONMovieParser());
         }
 
         public List<Movie> GetMovies(string title, string protocol)
@@ -35,22 +37,25 @@ namespace omdbWeb.Models
             HttpWebResponse webResponse = (HttpWebResponse)httpRequest.GetResponse();
 
             //Parse data
-            return _parsers[protocol.ToLower()].Parse(webResponse);
+            return parsers[protocol.ToLower()].Parse(webResponse);
 
         }
 
         public void AppendToAzueQueue(List<Movie> movies, string queueName){
-            string appId = "omdbWeb";
+            
             string connectionString = CloudConfigurationManager.GetSetting("Microsoft.ServiceBus.ConnectionString");
             QueueClient Client = QueueClient.CreateFromConnectionString(connectionString, queueName);
 
             foreach (Movie m in movies){
+                Trace.TraceInformation("Created queue message for AdId {0}", m.MovieId);
+               
                 // Create message, passing a string message for the body.
-                BrokeredMessage message = new BrokeredMessage(appId);
+                BrokeredMessage message = new BrokeredMessage(AppConfiguration.ApplicationId);
 
                 // Set some additional custom app-specific properties.
                 message.Properties["imdbId"] = m.imdbID;
                 message.Properties["Poster"] = m.Poster;
+                message.Properties["MovieId"] = m.MovieId;
 
 
                 // Send message to the queue.
