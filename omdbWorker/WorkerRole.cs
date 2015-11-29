@@ -14,8 +14,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading;
-using System.Threading.Tasks;
-using System.Web;
 
 namespace omdbWorker
 {
@@ -29,16 +27,15 @@ namespace omdbWorker
         
 
         public override void Run(){
-            Trace.WriteLine("Starting processing of messages");
-             
+            Trace.WriteLine("Starting processing of messages");         
             BrokeredMessage msg = null;
+            //Receiving message in Azure Queue
             while (true){
                 try{
                    
                     msg = Client.Receive();
                     if (msg != null){
-                        ProcessQueueMessage(msg);
-                        
+                        ProcessQueueMessage(msg);                     
                     } else {
                         Thread.Sleep(1000);
                     }
@@ -49,19 +46,18 @@ namespace omdbWorker
         }
 
         public override bool OnStart(){
-            // Set the maximum number of concurrent connections 
+            //Set the maximum number of concurrent connections 
             ServicePointManager.DefaultConnectionLimit = 12;
 
-            // Connect to the database 
+            //Connect to the database 
             var dbConnString = CloudConfigurationManager.GetSetting("omdbDbConnectionString");
             db = new MoviesContext(dbConnString);
 
-            // Create the queue if it does not exist already
+            //Create the queue if it does not exist already
             Trace.TraceInformation("Creating images queue");
             string connectionString = CloudConfigurationManager.GetSetting("Microsoft.ServiceBus.ConnectionString");
             var namespaceManager = NamespaceManager.CreateFromConnectionString(connectionString);
-            if (!namespaceManager.QueueExists(AppConfiguration.QueueName))
-            {
+            if (!namespaceManager.QueueExists(AppConfiguration.QueueName)) {
                 namespaceManager.CreateQueue(AppConfiguration.QueueName);
             }
 
@@ -96,10 +92,19 @@ namespace omdbWorker
             base.OnStop();
         }
 
+        //PROCESS A MESSAGE
         private void ProcessQueueMessage(BrokeredMessage msg){
             Trace.TraceInformation("Processing queue message {0}", msg);
+            string act = msg.Properties["Action"].ToString();
+
+            if (act == "Delete") {
+                DeleteAllContainerBlobs();
+                msg.Complete();
+                return;
+            }
+
             //GET MESSAGE CONTENT.
-            string appId = AppConfiguration.ApplicationId;//msg.Properties["appId"].ToString();
+            string appId = msg.GetBody<string>();
             string imdbId = msg.Properties["imdbId"].ToString();
             string remoteFileUrl = msg.Properties["Poster"].ToString();
             var movieId = int.Parse(msg.Properties["MovieId"].ToString());
@@ -151,24 +156,17 @@ namespace omdbWorker
 
                 //DOWNLOAD IMAGE FILE
                 Trace.TraceInformation("Download poster from remote web site");
-                getImageFile(blobName, remoteFileUrl);
-                if (!File.Exists(@blobName)){
-                    msg.Complete();
-                    return;
-                }
-
+                var mStream = GetImageStream(remoteFileUrl);
+                
                 //UPLOAD IMAGE TO BLOB, THEN DELETE FILE
-                using (var fileStream = File.OpenRead(@blobName))
-                {
-                    posterBlob.UploadFromStream(fileStream);
-                    fileStream.Dispose();
-                    File.Delete(@blobName);
+                using (Stream stream = posterBlob.OpenWrite()){
+                    stream.Write(mStream.ToArray(), 0,Convert.ToInt32(mStream.Length));
+                    stream.Flush();
                 }
-
+                
                 //CREATE THUMBBLOB FROM POSTERBLOB
                 Trace.TraceInformation("Generate thumbnail in blob {0}", thumbName);
-                using (Stream input = posterBlob.OpenRead())
-                using (Stream output = thumbBlob.OpenWrite())
+                using (Stream input = mStream, output = thumbBlob.OpenWrite())
                 {
                     ConvertImageToThumbnailJPG(input, output);
                     thumbBlob.Properties.ContentType = "image/jpeg";
@@ -183,11 +181,27 @@ namespace omdbWorker
                 movie.ImageURL = posterBlob.Uri.ToString();
                 movie.ThumbnailURL = thumbBlob.Uri.ToString();
                 db.SaveChanges();
-
                 msg.Complete();
+                mStream.Dispose();
+                mStream = null;
             }
         }
 
+        //DELETE ALL BLOBS IN IMAGE CONTAINERS
+        private void DeleteAllContainerBlobs() {
+            Trace.TraceInformation("Start deleting container's blobs");
+            var blobs = imagesBlobContainer.ListBlobs();
+            if (blobs == null || blobs.Count() == 0) { return; }
+            foreach (IListBlobItem blob in blobs) {
+                string blobName = blob.Uri.Segments[blob.Uri.Segments.Length - 1];
+                CloudBlockBlob thisBlob = imagesBlobContainer.GetBlockBlobReference(blobName);
+                Trace.TraceInformation("Delete blob: {0}", blobName);
+                thisBlob.DeleteIfExists();
+            }
+            Trace.TraceInformation("Complete deleting");
+        }
+
+        //CONVERT AN IMAGE INTO A THUMBNAIL
         public void ConvertImageToThumbnailJPG(Stream input, Stream output)
         {
             int thumbnailsize = 80;
@@ -230,11 +244,9 @@ namespace omdbWorker
             }
         }
 
-       
-
-        //Save image from URL to approot folder
+        //SAVE REMOTE IMAGE LOCALLY
         //In this project: omdbMovies\csx\Debug\roles\omdbWorker\approot
-        public void getImageFile(string file_name, string url) {
+        public void saveImage(string file_name, string url) {
             byte[] content;
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
             WebResponse response = request.GetResponse();
@@ -257,6 +269,25 @@ namespace omdbWorker
             }
         }
 
+        //CREATE MEMORYSTREAM OF THE REMOTE IMAGE(base on URL)
+        public MemoryStream GetImageStream(string url) {
+            
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+            WebResponse response = request.GetResponse();
+            Stream stream = response.GetResponseStream();
+            MemoryStream memStream = new MemoryStream();
+            //Read Response Stream into a Memory Stream
+            try{ 
+                byte[] block = new byte[0x1000]; // blocks of 4K.
+                while (true){
+                    int bytesRead = stream.Read(block, 0, block.Length);
+                    if (bytesRead == 0) return memStream;
+                    memStream.Write(block, 0, bytesRead);
+                }
+            } finally {
+                stream.Close();
+            }
+        }
     }
 }
 

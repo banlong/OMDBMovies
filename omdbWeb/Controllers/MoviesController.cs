@@ -10,15 +10,18 @@ namespace omdbWeb.Controllers
     public class MoviesController : Controller
     {
         private MoviesContext db = new MoviesContext();
+        private Repository repo = new Repository();
 
         // GET: Movies/DeleteAll
         public async Task<ActionResult> DeleteAll() {
             //create SQL entry
             db.Database.ExecuteSqlCommand("TRUNCATE TABLE Movies");
             db.SaveChanges();
+            repo.SendDeleteMessages(Action.Delete, AppConfiguration.QueueName);
             return View("Index", await db.Movies.ToListAsync());
         }
 
+        
         // GET: Movies/Populate
         public ActionResult Populate()
         {
@@ -30,15 +33,16 @@ namespace omdbWeb.Controllers
         public async Task<ActionResult> Populate(string SearchString, string Protocol)
         {
             //get data from omdbapi.com
-            Repository repo = new Repository();
             var movies = repo.GetMovies(SearchString, Protocol);
 
             if (movies != null)
             {
+                //add movies to SQL database
                 db.Movies.AddRange(movies);
                 await db.SaveChangesAsync();
+
                 //send msg to queue
-                repo.AppendToAzueQueue(movies, AppConfiguration.QueueName);
+                repo.SendMessages("Create", movies, AppConfiguration.QueueName);
 
                 //return view with data
                 return View("Index", await db.Movies.ToListAsync());

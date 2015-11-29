@@ -45,4 +45,9 @@ namespace omdbCommon
         Games
     }
 
+    public enum Action {
+        Create,
+        Delete
+    }
+
 }

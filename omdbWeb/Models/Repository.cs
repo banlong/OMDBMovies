@@ -41,18 +41,21 @@ namespace omdbWeb.Models
 
         }
 
-        public void AppendToAzueQueue(List<Movie> movies, string queueName){
-            
+        public void SendMessages(string act, List<Movie> movies, string queueName)
+        {
+
             string connectionString = CloudConfigurationManager.GetSetting("Microsoft.ServiceBus.ConnectionString");
             QueueClient Client = QueueClient.CreateFromConnectionString(connectionString, queueName);
 
-            foreach (Movie m in movies){
+            foreach (Movie m in movies)
+            {
                 Trace.TraceInformation("Created queue message for AdId {0}", m.MovieId);
-               
+
                 // Create message, passing a string message for the body.
                 BrokeredMessage message = new BrokeredMessage(AppConfiguration.ApplicationId);
 
                 // Set some additional custom app-specific properties.
+                message.Properties["Action"] = act;
                 message.Properties["imdbId"] = m.imdbID;
                 message.Properties["Poster"] = m.Poster;
                 message.Properties["MovieId"] = m.MovieId;
@@ -61,8 +64,25 @@ namespace omdbWeb.Models
                 // Send message to the queue.
                 Client.Send(message);
 
-                
+
             }
+        }
+
+        public void SendDeleteMessages(omdbCommon.Action act, string queueName) {
+
+            string connectionString = CloudConfigurationManager.GetSetting("Microsoft.ServiceBus.ConnectionString");
+            QueueClient Client = QueueClient.CreateFromConnectionString(connectionString, queueName);
+            Trace.TraceInformation("Created deleting request message");
+
+            // Create message, passing a string message for the body.
+            BrokeredMessage message = new BrokeredMessage(AppConfiguration.ApplicationId);
+
+            // Set some additional custom app-specific properties.
+            message.Properties["Action"] = act.ToString();
+
+            // Send message to the queue.
+            Client.Send(message);
+
         }
     }
 }
