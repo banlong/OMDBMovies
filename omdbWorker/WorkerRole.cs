@@ -27,7 +27,7 @@ namespace omdbWorker
         
 
         public override void Run(){
-            Trace.WriteLine("Starting processing of messages");         
+            Trace.WriteLine("WKR >>> Starting processing of messages");         
             BrokeredMessage msg = null;
             //Receiving message in Azure Queue
             while (true){
@@ -40,7 +40,7 @@ namespace omdbWorker
                         Thread.Sleep(1000);
                     }
                 }catch (StorageException e){
-                    Trace.TraceError("Deleting poison queue item: '{0}'", msg.Label);
+                    Trace.TraceError("WKR >>> Deleting poison queue item: '{0}'", msg.Label);
                 }
             }
         }
@@ -54,7 +54,7 @@ namespace omdbWorker
             db = new MoviesContext(dbConnString);
 
             //Create the queue if it does not exist already
-            Trace.TraceInformation("Creating images queue");
+            Trace.TraceInformation("WKR >>> Creating images queue");
             string connectionString = CloudConfigurationManager.GetSetting("Microsoft.ServiceBus.ConnectionString");
             var namespaceManager = NamespaceManager.CreateFromConnectionString(connectionString);
             if (!namespaceManager.QueueExists(AppConfiguration.QueueName)) {
@@ -68,7 +68,7 @@ namespace omdbWorker
             var storageAccount = CloudStorageAccount.Parse
                 (RoleEnvironment.GetConfigurationSettingValue("StorageConnectionString"));
 
-            Trace.TraceInformation("Creating images blob container");
+            Trace.TraceInformation("WKR >>> Creating images blob container");
             var blobClient = storageAccount.CreateCloudBlobClient();
             imagesBlobContainer = blobClient.GetContainerReference(AppConfiguration.BlobContainerName);
             if (imagesBlobContainer.CreateIfNotExists()){
@@ -80,7 +80,7 @@ namespace omdbWorker
                     });
             }
 
-            Trace.TraceInformation("Storage initialized");
+            Trace.TraceInformation("WKR >>> Storage initialized");
             return base.OnStart();
         }
 
@@ -94,9 +94,18 @@ namespace omdbWorker
 
         //PROCESS A MESSAGE
         private void ProcessQueueMessage(BrokeredMessage msg){
-            Trace.TraceInformation("Processing queue message {0}", msg);
-            string act = msg.Properties["Action"].ToString();
+            Trace.TraceInformation("WKR >>> Processing queue message {0}", msg);
 
+            //CHECK: recognize the app id? fail- abandon this message
+            string appId = msg.GetBody<string>();
+            if (appId != AppConfiguration.ApplicationId)
+            {
+                msg.Abandon();
+                return;
+            }
+
+            //PROCESS: base on action value
+            string act = msg.Properties["Action"].ToString();
             if (act == "DeleteAll")
             {
                 DeleteAllContainerBlobs();
@@ -111,17 +120,12 @@ namespace omdbWorker
                 return;
             }
 
-            //GET MESSAGE CONTENT.
-            string appId = msg.GetBody<string>();
+            //GET MESSAGE CONTENT (Create)
             string imdbId = msg.Properties["imdbId"].ToString();
             string remoteFileUrl = msg.Properties["Poster"].ToString();
             var movieId = int.Parse(msg.Properties["MovieId"].ToString());
 
-            //CHECK: recognize the app id? fail- abandon this message
-            if (appId != AppConfiguration.ApplicationId){
-                msg.Abandon();
-                return;
-            }
+            
 
             //CHECK: IF no image URL, or no MovieId in the sql database, fail- delete this message
             Movie m = db.Movies.Find(movieId);          
@@ -145,8 +149,11 @@ namespace omdbWorker
             else if (itemCount > 1)
             {
                 //remove duplicate item
-                //deleteDuplicate(imdbId);
+                Trace.TraceInformation("WKR >>> Duplicate movies detected");
+                db.Movies.Remove(m);
+                db.SaveChanges();
                 msg.Complete();
+                Trace.TraceInformation("WKR >>> Redundant item removed, message was deleted.");
                 return;
             }
             else if (itemCount == 1) {
@@ -163,7 +170,7 @@ namespace omdbWorker
                 
 
                 //DOWNLOAD IMAGE FILE
-                Trace.TraceInformation("Download poster from remote web site");
+                Trace.TraceInformation("WKR >>> Downloads poster from remote web site");
                 var mStream = GetImageStream(remoteFileUrl);
                 
                 //UPLOAD IMAGE TO BLOB, THEN DELETE FILE
@@ -173,7 +180,7 @@ namespace omdbWorker
                 }
                 
                 //CREATE THUMBBLOB FROM POSTERBLOB
-                Trace.TraceInformation("Generate thumbnail in blob {0}", thumbName);
+                Trace.TraceInformation("WKR >>> Generates thumbnail in blob {0}", thumbName);
                 using (Stream input = mStream, output = thumbBlob.OpenWrite())
                 {
                     ConvertImageToThumbnailJPG(input, output);
@@ -197,20 +204,23 @@ namespace omdbWorker
 
         //DELETE ALL BLOBS IN IMAGE CONTAINERS
         private void DeleteAllContainerBlobs() {
-            Trace.TraceInformation("Start deleting container's blobs");
+            Trace.TraceInformation("WKR >>> Starts deleting container's blobs");
             var blobs = imagesBlobContainer.ListBlobs();
             if (blobs == null || blobs.Count() == 0) { return; }
             foreach (IListBlobItem blob in blobs) {
                 string blobName = blob.Uri.Segments[blob.Uri.Segments.Length - 1];
                 CloudBlockBlob thisBlob = imagesBlobContainer.GetBlockBlobReference(blobName);
-                Trace.TraceInformation("Delete blob: {0}", blobName);
+                Trace.TraceInformation("WKR >>> Delete blob: {0}", blobName);
                 thisBlob.DeleteIfExists();
             }
-            Trace.TraceInformation("Complete deleting");
+            Trace.TraceInformation("WKR >>> Complete deleting");
         }
 
         //DELETE A THUMNAIL AND IMAGE BLOBS IN IMAGE CONTAINERS
         private void DeleteMovieImageBlobs(string imageURL, string thumbURL){
+            //No image blob
+            if (imageURL == "") return;
+
             //Get the blob's names from URL string
             Uri imageUri = new Uri(imageURL);
             string imageName = imageUri.Segments[imageUri.Segments.Length - 1];
@@ -218,12 +228,12 @@ namespace omdbWorker
             string thumbName = thumbUri.Segments[thumbUri.Segments.Length - 1];
 
             //Delete images
-            Trace.TraceInformation("Start deleting movie's blobs");
+            Trace.TraceInformation("WKR >>> Start deleting movie's blobs");
             CloudBlockBlob imageBlob = imagesBlobContainer.GetBlockBlobReference(imageName);
             CloudBlockBlob thumbBlob = imagesBlobContainer.GetBlockBlobReference(thumbName);
             imageBlob.DeleteIfExistsAsync();
             thumbBlob.DeleteIfExistsAsync();
-            Trace.TraceInformation("Complete deleting");
+            Trace.TraceInformation("WKR >>> Complete deleting");
         }
 
         //CONVERT AN IMAGE INTO A THUMBNAIL

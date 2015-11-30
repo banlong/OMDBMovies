@@ -7,7 +7,6 @@ using System.Configuration;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
-using System.Threading.Tasks;
 
 namespace omdbWeb.Models
 {
@@ -48,7 +47,7 @@ namespace omdbWeb.Models
 
             foreach (Movie m in movies)
             {
-                Trace.TraceInformation("Created queue message for AdId {0}", m.MovieId);
+                Trace.TraceInformation("WER >>> Created queue message for movieId {0}", m.MovieId);
 
                 // Create message, passing a string message for the body.
                 BrokeredMessage message = new BrokeredMessage(AppConfiguration.ApplicationId);
@@ -71,7 +70,7 @@ namespace omdbWeb.Models
 
             string connectionString = CloudConfigurationManager.GetSetting("Microsoft.ServiceBus.ConnectionString");
             QueueClient Client = QueueClient.CreateFromConnectionString(connectionString, queueName);
-            Trace.TraceInformation("Created deleting request message");
+            Trace.TraceInformation("WER >>> Created deleting request message");
 
             // Create message, passing a string message for the body.
             BrokeredMessage message = new BrokeredMessage(AppConfiguration.ApplicationId);

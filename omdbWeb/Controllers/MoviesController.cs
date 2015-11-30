@@ -4,6 +4,7 @@ using System.Net;
 using System.Web.Mvc;
 using omdbCommon;
 using omdbWeb.Models;
+using System.Diagnostics;
 
 namespace omdbWeb.Controllers
 {
@@ -54,7 +55,7 @@ namespace omdbWeb.Controllers
         {
             //get data from omdbapi.com
             var movies = repo.GetMovies(SearchString, Protocol);
-
+            Trace.TraceInformation("WER >>> New item count {0}", movies.Count );
             if (movies != null)
             {
                 //add movies to SQL database
