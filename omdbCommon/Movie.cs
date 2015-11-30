@@ -14,15 +14,19 @@ namespace omdbCommon
             ImageURL = "";
             ThumbnailURL = "";
         }
-
+        [Required]
         public int MovieId { get; set; }
 
+        [Required]
         public string Title { get; set; }
 
+        [Required]
         public Type? Type { get; set; }
 
+        [Required]
         public string Year { get; set; }
 
+        [Required]
         public string imdbID { get; set; }
 
         public string Poster { get; set; }
@@ -47,7 +51,8 @@ namespace omdbCommon
 
     public enum Action {
         Create,
-        Delete
+        Delete,
+        DeleteAll
     }
 
 }

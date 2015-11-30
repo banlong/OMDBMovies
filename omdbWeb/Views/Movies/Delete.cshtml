@@ -18,7 +18,12 @@
         <dd>
             @Html.DisplayFor(model => model.Title)
         </dd>
-
+        <dt>
+            @Html.DisplayNameFor(model => model.Year)
+        </dt>
+        <dd>
+            @Html.DisplayFor(model => model.Year)
+        </dd>
         <dt>
             @Html.DisplayNameFor(model => model.Type)
         </dt>
@@ -26,45 +31,11 @@
         <dd>
             @Html.DisplayFor(model => model.Type)
         </dd>
-
         <dt>
-            @Html.DisplayNameFor(model => model.Year)
+           Thumnail of image
         </dt>
-
         <dd>
-            @Html.DisplayFor(model => model.Year)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.imdbID)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.imdbID)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.Poster)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.Poster)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.ImageURL)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.ImageURL)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.ThumbnailURL)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.ThumbnailURL)
+            <img src="@Html.Raw(Model.ThumbnailURL)" />
         </dd>
 
     </dl>

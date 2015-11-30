@@ -12,12 +12,32 @@ namespace omdbWeb.Controllers
         private MoviesContext db = new MoviesContext();
         private Repository repo = new Repository();
 
+        // GET: Movies/Search
+        public ActionResult Search(){
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<ActionResult> Search(SubmitData message)
+        {
+            if (message.Title == null & message.Type == null & message.Year == null) {
+                //return full list if there is no input
+                return View(await db.Movies.ToListAsync());
+            } else {
+                var ret = repo.Search(message);
+                if (ret.Count == 0){
+                  ModelState.AddModelError("NotFound", "Movie not found");
+                }
+                return View(ret);
+            }
+        }
+
         // GET: Movies/DeleteAll
         public async Task<ActionResult> DeleteAll() {
             //create SQL entry
             db.Database.ExecuteSqlCommand("TRUNCATE TABLE Movies");
             db.SaveChanges();
-            repo.SendDeleteMessages(Action.Delete, AppConfiguration.QueueName);
+            repo.SendDeleteMessages(Action.DeleteAll, AppConfiguration.QueueName);
             return View("Index", await db.Movies.ToListAsync());
         }
 
@@ -150,6 +170,7 @@ namespace omdbWeb.Controllers
         {
             Movie movie = await db.Movies.FindAsync(id);
             db.Movies.Remove(movie);
+            repo.SendDeleteMessages(Action.Delete, AppConfiguration.QueueName, movie.ImageURL, movie.ThumbnailURL);
             await db.SaveChangesAsync();
             return RedirectToAction("Index");
         }

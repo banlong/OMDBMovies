@@ -97,8 +97,16 @@ namespace omdbWorker
             Trace.TraceInformation("Processing queue message {0}", msg);
             string act = msg.Properties["Action"].ToString();
 
-            if (act == "Delete") {
+            if (act == "DeleteAll")
+            {
                 DeleteAllContainerBlobs();
+                msg.Complete();
+                return;
+            }
+            else if (act == "Delete") {
+                string imageUrl = msg.Properties["ImageUrl"].ToString();
+                string thumbUrl = msg.Properties["ThumbURL"].ToString();
+                DeleteMovieImageBlobs(imageUrl, thumbUrl);
                 msg.Complete();
                 return;
             }
@@ -198,6 +206,23 @@ namespace omdbWorker
                 Trace.TraceInformation("Delete blob: {0}", blobName);
                 thisBlob.DeleteIfExists();
             }
+            Trace.TraceInformation("Complete deleting");
+        }
+
+        //DELETE A THUMNAIL AND IMAGE BLOBS IN IMAGE CONTAINERS
+        private void DeleteMovieImageBlobs(string imageURL, string thumbURL){
+            //Get the blob's names from URL string
+            Uri imageUri = new Uri(imageURL);
+            string imageName = imageUri.Segments[imageUri.Segments.Length - 1];
+            Uri thumbUri = new Uri(thumbURL);
+            string thumbName = thumbUri.Segments[thumbUri.Segments.Length - 1];
+
+            //Delete images
+            Trace.TraceInformation("Start deleting movie's blobs");
+            CloudBlockBlob imageBlob = imagesBlobContainer.GetBlockBlobReference(imageName);
+            CloudBlockBlob thumbBlob = imagesBlobContainer.GetBlockBlobReference(thumbName);
+            imageBlob.DeleteIfExistsAsync();
+            thumbBlob.DeleteIfExistsAsync();
             Trace.TraceInformation("Complete deleting");
         }
 

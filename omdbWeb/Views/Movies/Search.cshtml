@@ -1,0 +1,83 @@
+﻿@model List<Movie>
+@{
+    ViewBag.Title = "Search";
+    var title = string.Empty;
+    var type = string.Empty;
+    var year = string.Empty;
+    var movie = string.Empty;
+    var games = string.Empty;
+    var series = string.Empty;
+    var episodes = string.Empty;
+    var all = string.Empty;
+
+    //To keep the state of the controls
+    if (IsPost)
+    {
+        //this code to save state of the textbox
+        title = Request["title"];
+        year = Request["year"];
+
+
+        //this code to save state of the dropdown list
+        type = Request["type"];
+        if (type == "Movie")
+        {
+            movie = "selected";
+        }
+        else if (type == "Games")
+        {
+            games = "selected";
+        }
+        else if (type == "Series")
+        {
+            series = "selected";
+        }
+        else if (type == "Episodes")
+        {
+            episodes = "selected";
+        }
+        else if (type == "")
+        {
+            all = "selected";
+        }
+    }
+}
+
+
+<h2>Search</h2>
+
+<form role="form" action="/Movies/Search" method="post" id="myForm">
+    <div class="form-group col-sm-3">
+        <label for="title">Title</label>
+        <input type="text" name="title" id="title" value="@title" autofocus class="form-control">
+    </div>
+
+    <div class="form-group col-sm-3">
+        <label for="lastName">Year</label>
+        <input type="text" name="year" id="year" value="@year" class="form-control">
+    </div>
+
+    <div class="form-group col-sm-3">
+        <label for="type">Type </label>
+        <select id="type" name="type" class="form-control">
+            <option @all> </option>
+            <option @movie>Movie</option>
+            <option @games>Games</option>
+            <option @series>Series</option>
+            <option @episodes>Episodes</option>
+        </select>
+    </div>
+
+    <div class="form-group" id="button">
+        <label for="bttnQuery"><font color="white">Search</font></label>
+        <input class="btn btn-success col-sm-3" id="bttnQuery" name="bttnQuery" type="submit" value="Search" />
+    </div>
+    <br><br>
+</form>
+
+<div class="col-sm-12">
+   @Html.Partial("_Result", Model)
+</div>
+    
+
+
