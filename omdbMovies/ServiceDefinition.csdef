@@ -9,9 +9,8 @@
       </Site>
     </Sites>
     <ConfigurationSettings>
-      <Setting name="Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString" />
-      <Setting name="StorageConnectionString" />
       <Setting name="Microsoft.ServiceBus.ConnectionString" />
+      <Setting name="MoviesContextConnectionString" />
     </ConfigurationSettings>
     <Endpoints>
       <InputEndpoint name="Endpoint1" protocol="http" port="80" />

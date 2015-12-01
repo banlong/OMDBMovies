@@ -29,10 +29,10 @@
         </PerformanceCounters>
       </DiagnosticMonitorConfiguration>
     </WadCfg>
-    <StorageAccount>devstoreaccount1</StorageAccount>
+    <StorageAccount>banlongstorage</StorageAccount>
   </PublicConfig>
   <PrivateConfig xmlns="http://schemas.microsoft.com/ServiceHosting/2010/10/DiagnosticsConfiguration">
-    <StorageAccount name="devstoreaccount1" key="Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==" />
+    <StorageAccount name="banlongstorage" key="pXCqNOei6f1ImewLMc8RgV8HeXUpoo4T2Y6UXYCMMFY57d+CaAoDwszgXj82dJyPL2SspxIeVGDMxMHf0piXiw==" endpoint="https://core.windows.net" />
   </PrivateConfig>
   <IsEnabled>true</IsEnabled>
 </DiagnosticsConfiguration>

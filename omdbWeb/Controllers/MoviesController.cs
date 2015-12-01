@@ -5,7 +5,6 @@ using System.Web.Mvc;
 using omdbCommon;
 using omdbWeb.Models;
 using System.Diagnostics;
-using System.Linq;
 
 namespace omdbWeb.Controllers
 {
@@ -70,9 +69,7 @@ namespace omdbWeb.Controllers
 
                 //return view with data
                 return View("Index", await db.Movies.ToListAsync());
-            }
-            else
-            {
+            } else {
                 return View();
             }
         }

@@ -1,5 +1,5 @@
-﻿using Microsoft.ServiceBus.Messaging;
-using Microsoft.WindowsAzure;
+﻿using Microsoft.Azure;
+using Microsoft.ServiceBus.Messaging;
 using omdbCommon;
 using System;
 using System.Collections.Generic;
@@ -16,9 +16,9 @@ namespace omdbWeb.Models
     {
         private Dictionary<string, IMovieParser> parsers = new Dictionary<string, IMovieParser>();
         private MoviesContext db = new MoviesContext();
+       
 
-        public Repository()
-        {
+        public Repository() {
             parsers.Add("xml", new XmlMovieParser());
             parsers.Add("json", new JSONMovieParser());
         }
