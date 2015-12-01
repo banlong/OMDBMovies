@@ -5,6 +5,7 @@ using System.Web.Mvc;
 using omdbCommon;
 using omdbWeb.Models;
 using System.Diagnostics;
+using System.Linq;
 
 namespace omdbWeb.Controllers
 {
@@ -23,7 +24,9 @@ namespace omdbWeb.Controllers
         {
             if (message.Title == null & message.Type == null & message.Year == null) {
                 //return full list if there is no input
+                
                 return View(await db.Movies.ToListAsync());
+                
             } else {
                 var ret = repo.Search(message);
                 if (ret.Count == 0){
@@ -77,6 +80,8 @@ namespace omdbWeb.Controllers
         // GET: Movies
         public async Task<ActionResult> Index()
         {
+            //Accendig sort for item, using OrderbyDescending for DESC sort
+            //var movies = db.Movies.OrderBy(mv => mv.imdbID);
             return View(await db.Movies.ToListAsync());
         }
 

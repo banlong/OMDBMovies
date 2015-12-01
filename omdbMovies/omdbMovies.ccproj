@@ -57,10 +57,14 @@
   <ItemGroup>
     <Folder Include="omdbWebContent\" />
     <Folder Include="omdbWorkerContent\" />
+    <Folder Include="Profiles" />
   </ItemGroup>
   <ItemGroup>
     <DiagnosticsConfiguration Include="omdbWebContent\diagnostics.wadcfgx" />
     <DiagnosticsConfiguration Include="omdbWorkerContent\diagnostics.wadcfgx" />
+  </ItemGroup>
+  <ItemGroup>
+    <PublishProfile Include="Profiles\imdbmovies.azurePubxml" />
   </ItemGroup>
   <!-- Import the target files for this project template -->
   <PropertyGroup>
