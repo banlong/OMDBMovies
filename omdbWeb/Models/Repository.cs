@@ -1,10 +1,7 @@
-﻿using Microsoft.Azure;
-using Microsoft.ServiceBus.Messaging;
-using omdbCommon;
+﻿using omdbCommon;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
-using System.Diagnostics;
 using System.Linq;
 using System.Net;
 
@@ -39,54 +36,7 @@ namespace omdbWeb.Models
 
         }
 
-        public void SendMessages(string act, List<Movie> movies, string queueName)
-        {
-
-            string connectionString = CloudConfigurationManager.GetSetting("Microsoft.ServiceBus.ConnectionString");
-            QueueClient Client = QueueClient.CreateFromConnectionString(connectionString, queueName);
-
-            foreach (Movie m in movies)
-            {
-                Trace.TraceInformation("WER >>> Created queue message for movieId {0}", m.MovieId);
-
-                // Create message, passing a string message for the body.
-                BrokeredMessage message = new BrokeredMessage(AppConfiguration.ApplicationId);
-
-                // Set some additional custom app-specific properties.
-                message.Properties["Action"] = act;
-                message.Properties["imdbId"] = m.imdbID;
-                message.Properties["Poster"] = m.Poster;
-                message.Properties["MovieId"] = m.MovieId;
-
-
-                // Send message to the queue.
-                Client.Send(message);
-
-
-            }
-        }
-
-        public void SendDeleteMessages(omdbCommon.Action act, string queueName, string blobUrl = "", string thumbUrl = ""){
-
-            string connectionString = CloudConfigurationManager.GetSetting("Microsoft.ServiceBus.ConnectionString");
-            QueueClient Client = QueueClient.CreateFromConnectionString(connectionString, queueName);
-            Trace.TraceInformation("WER >>> Created deleting request message");
-
-            // Create message, passing a string message for the body.
-            BrokeredMessage message = new BrokeredMessage(AppConfiguration.ApplicationId);
-
-            // Set some additional custom app-specific properties.
-            message.Properties["Action"] = act.ToString();
-            message.Properties["ImageUrl"] = blobUrl;
-            message.Properties["ThumbURL"] = thumbUrl;
-
-            // Send message to the queue.
-            Client.Send(message);
-
-        }
-
-        public List<Movie> Search(SubmitData message)
-        {
+        public List<Movie> Search(SubmitData message){
             //get input values from client
             string title = (message.Title == null) ? "" : message.Title.Trim();
             string year = (message.Year == null) ? "" : message.Year.Trim();
