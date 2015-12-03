@@ -1,21 +1,19 @@
-﻿using omdbCommon;
+﻿
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
-using System.Web.Script.Serialization;
 using System.Xml;
+using System.Web.Script.Serialization;
 
-namespace omdbWeb.Models
+namespace omdbCommon
 {
-    public interface IMovieParser
-    {
+    public interface IMovieParser {
         List<Movie> Parse(HttpWebResponse httpWebResponse);
     }
 
-    public class XmlMovieParser : IMovieParser
-    {
-        public List<Movie> Parse(HttpWebResponse webResponse)
-        {
+    public class XmlMovieParser : IMovieParser  {
+
+        public List<Movie> Parse(HttpWebResponse webResponse){
             List<Movie> ret = new List<Movie>();
             XmlDocument doc = new XmlDocument();
             doc.Load(webResponse.GetResponseStream());
@@ -38,8 +36,7 @@ namespace omdbWeb.Models
         }
     }
 
-    public class JSONMovieParser : IMovieParser
-    {
+    public class JSONMovieParser : IMovieParser {
         public List<Movie> Parse(HttpWebResponse webResponse)
         {
             List<Movie> ret = new List<Movie>();
@@ -63,25 +60,24 @@ namespace omdbWeb.Models
         }
     }
 
-    public static class DataHelper
-    {
+    public static class DataHelper {
         public static string GetAttributeValue(XmlNode node, string attributeName)
         {
             return node.Attributes[attributeName] != null ? node.Attributes[attributeName].Value : string.Empty;
         }
 
-        public static omdbCommon.Type GetOMDBObjType(string type)
+        public static Type GetOMDBObjType(string type)
         {
             switch (type)
             {
                 case "movie":
-                    return omdbCommon.Type.Movie;
+                    return Type.Movie;
                 case "series":
-                    return omdbCommon.Type.Series;
+                    return Type.Series;
                 case "game":
-                    return omdbCommon.Type.Games;
+                    return Type.Games;
                 default:
-                    return omdbCommon.Type.Episode;
+                    return Type.Episode;
             }
         }
     }

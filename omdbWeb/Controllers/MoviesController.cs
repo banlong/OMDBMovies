@@ -11,7 +11,7 @@ namespace omdbWeb.Controllers
     public class MoviesController : Controller
     {
         //private MoviesContext db = new MoviesContext();
-        private Repository repo = new Repository();
+        //private Repository repo = new Repository();
 
         private AzureConnector azureSub = new AzureConnector(Connection.GetConnStrs());
         private DataContext dc = new DataContext(Connection.GetConnStrs());
@@ -30,7 +30,7 @@ namespace omdbWeb.Controllers
                 return View(await dc.ToListAsync());
                 
             } else {
-                var ret = repo.Search(message);
+                var ret = dc.Search(message);
                 if (ret.Count == 0){
                   ModelState.AddModelError("NotFound", "Movie not found");
                 }
@@ -58,7 +58,8 @@ namespace omdbWeb.Controllers
         public async Task<ActionResult> Populate(string SearchString, string Protocol)
         {
             //get data from omdbapi.com
-            var movies = repo.GetMovies(SearchString, Protocol);
+            var httpHelper = new HttpServices();
+            var movies = httpHelper.GetMovies(SearchString, Protocol);
             Trace.TraceInformation("WER >>> New item count {0}", movies.Count );
             if (movies != null)
             {

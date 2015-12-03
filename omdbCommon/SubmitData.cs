@@ -1,8 +1,8 @@
-﻿namespace omdbWeb.Models
-{
+﻿namespace omdbCommon{
+
+    //Using this data struct to transmit data in a search
     public class SubmitData{
-        public SubmitData()
-        {
+        public SubmitData(){
             Title = "";
             Type = "";
             Year = "";

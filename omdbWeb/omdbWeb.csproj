@@ -173,9 +173,6 @@
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
     <Compile Include="Models\Connection.cs" />
-    <Compile Include="Models\DataParser.cs" />
-    <Compile Include="Models\Repository.cs" />
-    <Compile Include="Models\SubmitData.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="WebRole.cs" />
   </ItemGroup>
