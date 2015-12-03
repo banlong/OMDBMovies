@@ -12,6 +12,7 @@
     <AssemblyName>omdbMovies</AssemblyName>
     <StartDevelopmentStorage>True</StartDevelopmentStorage>
     <Name>omdbMovies</Name>
+    <UseWebProjectPorts>True</UseWebProjectPorts>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>

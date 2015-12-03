@@ -6,7 +6,8 @@
       <Setting name="Microsoft.ServiceBus.ConnectionString" value="Endpoint=sb://banlong.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=Krw3ev1r154vNgoajYw/m8nlH0FmO8JPZeAtgd+386Y=" />
       <Setting name="MoviesContextConnectionString" value="Server=tcp:banlong.database.windows.net,1433;Database=Movies;User ID=banlong@banlong;Password=Sunghiep00;Trusted_Connection=False;Encrypt=True;Connection Timeout=30;" />
       <Setting name="Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString" value="DefaultEndpointsProtocol=https;AccountName=banlongstorage;AccountKey=pXCqNOei6f1ImewLMc8RgV8HeXUpoo4T2Y6UXYCMMFY57d+CaAoDwszgXj82dJyPL2SspxIeVGDMxMHf0piXiw==" />
-      <Setting name="StorageConnectionString" value="UseDevelopmentStorage=true" />
+      <Setting name="StorageConnectionString" value="DefaultEndpointsProtocol=https;AccountName=banlongstorage;AccountKey=pXCqNOei6f1ImewLMc8RgV8HeXUpoo4T2Y6UXYCMMFY57d+CaAoDwszgXj82dJyPL2SspxIeVGDMxMHf0piXiw==" />
+      <Setting name="QueueName" value="productionqueue" />
     </ConfigurationSettings>
   </Role>
   <Role name="omdbWorker">
@@ -16,6 +17,7 @@
       <Setting name="Microsoft.ServiceBus.ConnectionString" value="Endpoint=sb://banlong.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=Krw3ev1r154vNgoajYw/m8nlH0FmO8JPZeAtgd+386Y=" />
       <Setting name="StorageConnectionString" value="DefaultEndpointsProtocol=https;AccountName=banlongstorage;AccountKey=pXCqNOei6f1ImewLMc8RgV8HeXUpoo4T2Y6UXYCMMFY57d+CaAoDwszgXj82dJyPL2SspxIeVGDMxMHf0piXiw==" />
       <Setting name="MoviesContextConnectionString" value="Server=tcp:banlong.database.windows.net,1433;Database=Movies;User ID=banlong@banlong;Password=Sunghiep00;Trusted_Connection=False;Encrypt=True;Connection Timeout=30;" />
+      <Setting name="QueueName" value="productionqueue" />
     </ConfigurationSettings>
   </Role>
 </ServiceConfiguration>

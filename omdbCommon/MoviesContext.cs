@@ -2,8 +2,7 @@
 using Microsoft.Azure;
 using System.Data.Entity;
 
-namespace omdbCommon
-{
+namespace omdbCommon { 
     
     public class MoviesContext : DbContext{
 

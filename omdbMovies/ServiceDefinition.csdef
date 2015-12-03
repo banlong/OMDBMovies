@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ServiceDefinition name="omdbMovies" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition" schemaVersion="2015-04.2.6">
-  <WebRole name="omdbWeb" vmsize="Small">
+  <WebRole name="omdbWeb" vmsize="Medium">
     <Sites>
       <Site name="Web">
         <Bindings>
@@ -13,17 +13,19 @@
       <Setting name="MoviesContextConnectionString" />
       <Setting name="Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString" />
       <Setting name="StorageConnectionString" />
+      <Setting name="QueueName" />
     </ConfigurationSettings>
     <Endpoints>
       <InputEndpoint name="Endpoint1" protocol="http" port="80" />
     </Endpoints>
   </WebRole>
-  <WorkerRole name="omdbWorker" vmsize="Small">
+  <WorkerRole name="omdbWorker" vmsize="Medium">
     <ConfigurationSettings>
       <Setting name="Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString" />
       <Setting name="Microsoft.ServiceBus.ConnectionString" />
       <Setting name="StorageConnectionString" />
       <Setting name="MoviesContextConnectionString" />
+      <Setting name="QueueName" />
     </ConfigurationSettings>
   </WorkerRole>
 </ServiceDefinition>

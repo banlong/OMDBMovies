@@ -11,34 +11,36 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 
-namespace omdbCommon{
+namespace omdbCommon
+{
 
-    public class AzureConnector{
+    //THIS CLASS PROVIDES USERS ABILITIES TO INTERACTIVE WITH THE AZURE ACCOUNT
+    //Users can create queue, add/delete blobs, send/receive messages
+    public class AzureServiceProvider{
+
         private string busConnString, storageConnString;
         private CloudStorageAccount storageAccount;
         public QueueClient QClient;
         private CloudBlobContainer container;
         private CloudBlobClient blobClient;
+        
 
         //CONSTRUCTOR
-        public AzureConnector(Dictionary<string, string> cons)
+        public AzureServiceProvider(Dictionary<string, string> cons)
         {
             busConnString = cons["BusConnString"];
             storageConnString = cons["StorageConnString"];
             storageAccount = CloudStorageAccount.Parse(storageConnString);
-
             blobClient = storageAccount.CreateCloudBlobClient();
             container = blobClient.GetContainerReference(AppConfiguration.BlobContainerName);
-            CreateQueue(AppConfiguration.QueueName);
+            CreateQueue(cons["QueueName"]);
             CreateContainer();
         }
 
         //SEND MESSAGE TO QUEUE - REQUEST to creat thumbnail & poster
-        public void SendMessages(string act, List<Movie> movies)
-        {
+        public void SendMessages(string act, List<Movie> movies){
 
-            foreach (Movie m in movies)
-            {
+            foreach (Movie m in movies){
                 Trace.TraceInformation("WER >>> Created queue message for movieId {0}", m.MovieId);
 
                 // Create message, passing a string message for the body.
@@ -58,8 +60,7 @@ namespace omdbCommon{
         }
 
         //SEND MESSAGE TO QUEUE - REQUEST to delete thumbnails & posters
-        public void SendDeleteMessages(Action act, string blobUrl = "", string thumbUrl = "")
-        {
+        public void SendDeleteMessages(Action act, string blobUrl = "", string thumbUrl = ""){
             Trace.TraceInformation("WER >>> Created deleting request message");
 
             // Create message, passing a string message for the body.
@@ -77,8 +78,7 @@ namespace omdbCommon{
         }
 
         //GET QUEUE REFERENCE
-        private void CreateQueue(string queueName)
-        {
+        private void CreateQueue(string queueName){
             //Create the queue if it does not exist already
             Trace.TraceInformation("COM >>> Creating images queue");
             var namespaceManager = NamespaceManager.CreateFromConnectionString(busConnString);
@@ -94,12 +94,10 @@ namespace omdbCommon{
         }
 
         //CREAT THE CONTAINER FOR IMAGE
-        private void CreateContainer()
-        {
+        private void CreateContainer() { 
             Trace.TraceInformation("WKR >>> Creating images blob container");
 
-            if (container.CreateIfNotExists())
-            {
+            if (container.CreateIfNotExists()) {
                 // Enable public access on the newly created "images" container.
                 container.SetPermissions(
                     new BlobContainerPermissions
@@ -111,9 +109,8 @@ namespace omdbCommon{
             Trace.TraceInformation("WKR >>> Container initialized");
         }
 
-        //IMAGE PROCESSING
-        public Dictionary<string, string> SaveImagesToContainer(MemoryStream mStream, string posterName)
-        {
+        //CREATE IMAGE BLOBS FROM INPUT STREAM
+        public Dictionary<string, string> SaveImagesToContainer(MemoryStream mStream, string posterName) {
             //DEFINE BLOB
             CloudBlockBlob posterBlob = container.GetBlockBlobReference(posterName);
             posterBlob.Properties.ContentType = "image/jpeg";
@@ -147,31 +144,25 @@ namespace omdbCommon{
         }
 
         //CONVERT AN IMAGE INTO A THUMBNAIL
-        private void ConvertImageToThumbnailJPG(Stream input, Stream output)
-        {
+        private void ConvertImageToThumbnailJPG(Stream input, Stream output){
             int thumbnailsize = 80;
             int width;
             int height;
             var originalImage = new Bitmap(input);
 
-            if (originalImage.Width > originalImage.Height)
-            {
+            if (originalImage.Width > originalImage.Height){
                 width = thumbnailsize;
                 height = thumbnailsize * originalImage.Height / originalImage.Width;
-            }
-            else
-            {
+            }else {
                 height = thumbnailsize;
                 width = thumbnailsize * originalImage.Width / originalImage.Height;
             }
 
             Bitmap thumbnailImage = null;
-            try
-            {
+            try {
                 thumbnailImage = new Bitmap(width, height);
 
-                using (Graphics graphics = Graphics.FromImage(thumbnailImage))
-                {
+                using (Graphics graphics = Graphics.FromImage(thumbnailImage)) {
                     graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
                     graphics.SmoothingMode = SmoothingMode.AntiAlias;
                     graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
@@ -179,24 +170,20 @@ namespace omdbCommon{
                 }
 
                 thumbnailImage.Save(output, ImageFormat.Jpeg);
-            }
-            finally
-            {
-                if (thumbnailImage != null)
-                {
+            } finally {
+                if (thumbnailImage != null) {
                     thumbnailImage.Dispose();
                 }
             }
         }
 
+
         //DELETE ALL BLOBS IN IMAGE CONTAINERS
-        public void DeleteAllBlobs()
-        {
+        public void DeleteAllBlobs(){
             Trace.TraceInformation("WKR >>> Starts deleting container's blobs");
             var blobs = container.ListBlobs();
             if (blobs == null || blobs.Count() == 0) { return; }
-            foreach (IListBlobItem blob in blobs)
-            {
+            foreach (IListBlobItem blob in blobs) {
                 string blobName = blob.Uri.Segments[blob.Uri.Segments.Length - 1];
                 CloudBlockBlob thisBlob = container.GetBlockBlobReference(blobName);
                 thisBlob.DeleteIfExists();
@@ -207,8 +194,7 @@ namespace omdbCommon{
 
 
         //DELETE A THUMNAIL AND IMAGE BLOBS IN IMAGE CONTAINERS
-        public void DeleteMovieImageBlobs(string imageURL, string thumbURL)
-        {
+        public void DeleteMovieImageBlobs(string imageURL, string thumbURL){
             //No image blob
             if (imageURL == "") return;
 
@@ -228,4 +214,6 @@ namespace omdbCommon{
             Trace.TraceInformation("COM >>> Complete deleting");
         }
     }
+
+    
 }

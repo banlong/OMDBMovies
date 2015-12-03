@@ -11,8 +11,8 @@ namespace omdbCommon
         List<Movie> Parse(HttpWebResponse httpWebResponse);
     }
 
+    //DATA PARSER: XML RESULT INTO MOVIES
     public class XmlMovieParser : IMovieParser  {
-
         public List<Movie> Parse(HttpWebResponse webResponse){
             List<Movie> ret = new List<Movie>();
             XmlDocument doc = new XmlDocument();
@@ -36,16 +36,15 @@ namespace omdbCommon
         }
     }
 
+    //DATA PARSER: JSON RESULT INTO MOVIES
     public class JSONMovieParser : IMovieParser {
-        public List<Movie> Parse(HttpWebResponse webResponse)
-        {
+        public List<Movie> Parse(HttpWebResponse webResponse) {
             List<Movie> ret = new List<Movie>();
-            using (var reader = new StreamReader(webResponse.GetResponseStream()))
-            {
+
+            using (var reader = new StreamReader(webResponse.GetResponseStream())) {
                 JavaScriptSerializer js = new JavaScriptSerializer();
                 var data = js.Deserialize<dynamic>(reader.ReadToEnd());
-                foreach (var dataObj in data["Search"])
-                {
+                foreach (var dataObj in data["Search"]) {
                     Movie newMovie = new Movie();
                     newMovie.Title = dataObj["Title"];
                     newMovie.Year = dataObj["Year"];
@@ -60,16 +59,17 @@ namespace omdbCommon
         }
     }
 
+    //DATA HELPER: RETURN THE TYPE OF MOVIE
     public static class DataHelper {
-        public static string GetAttributeValue(XmlNode node, string attributeName)
-        {
+
+        //GET THE VALUE FROM THE XML NODE
+        public static string GetAttributeValue(XmlNode node, string attributeName) {
             return node.Attributes[attributeName] != null ? node.Attributes[attributeName].Value : string.Empty;
         }
 
-        public static Type GetOMDBObjType(string type)
-        {
-            switch (type)
-            {
+        //GET THE MOVIE TYPE
+        public static Type GetOMDBObjType(string type) {
+            switch (type) {
                 case "movie":
                     return Type.Movie;
                 case "series":

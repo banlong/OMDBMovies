@@ -90,14 +90,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AppConfiguration.cs" />
-    <Compile Include="AzureConnector.cs" />
-    <Compile Include="DataContext.cs" />
+    <Compile Include="AzureServiceProvider.cs" />
+    <Compile Include="DataProvider.cs" />
     <Compile Include="DataParser.cs" />
     <Compile Include="HttpServices.cs" />
     <Compile Include="Movie.cs" />
     <Compile Include="MoviesContext.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SubmitData.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

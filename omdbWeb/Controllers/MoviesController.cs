@@ -3,18 +3,17 @@ using System.Threading.Tasks;
 using System.Net;
 using System.Web.Mvc;
 using omdbCommon;
-using omdbWeb.Models;
 using System.Diagnostics;
 
 namespace omdbWeb.Controllers
 {
     public class MoviesController : Controller
     {
-        //private MoviesContext db = new MoviesContext();
-        //private Repository repo = new Repository();
+        //Azure service provider
+        private AzureServiceProvider cloudServiceProvider = new AzureServiceProvider(ConnectionStrings.GetConnStrs());
 
-        private AzureConnector azureSub = new AzureConnector(Connection.GetConnStrs());
-        private DataContext dc = new DataContext(Connection.GetConnStrs());
+        //Data provider
+        private DataProvider dataProvider = new DataProvider(ConnectionStrings.GetConnStrs());
 
         // GET: Movies/Search
         public ActionResult Search(){
@@ -22,15 +21,16 @@ namespace omdbWeb.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult> Search(SubmitData message)
-        {
+        public async Task<ActionResult> Search(SubmitData message) {
             if (message.Title == null & message.Type == null & message.Year == null) {
-                //return full list if there is no input
                 
-                return View(await dc.ToListAsync());
+                //return full list if there is no input
+                return View(await dataProvider.ToListAsync());
                 
             } else {
-                var ret = dc.Search(message);
+                var ret = dataProvider.Search(message);
+                
+                //Setup model state status
                 if (ret.Count == 0){
                   ModelState.AddModelError("NotFound", "Movie not found");
                 }
@@ -40,36 +40,36 @@ namespace omdbWeb.Controllers
 
         // GET: Movies/DeleteAll
         public async Task<ActionResult> DeleteAll() {
-            //create SQL entry
-            dc.ExecuteSqlCommand("TRUNCATE TABLE Movies");
-            azureSub.SendDeleteMessages(Action.DeleteAll);
-            return View("Index", await dc.ToListAsync());
+            //create & execute SQL command
+            dataProvider.ExecuteSqlCommand("TRUNCATE TABLE Movies");
+
+            //send delete all request
+            cloudServiceProvider.SendDeleteMessages(Action.DeleteAll);
+            return View("Index", await dataProvider.ToListAsync());
         }
 
         
         // GET: Movies/Populate
-        public ActionResult Populate()
-        {
+        public ActionResult Populate(){
             return View();
         }
 
         // Post: Movies/Populate
         [HttpPost]
-        public async Task<ActionResult> Populate(string SearchString, string Protocol)
-        {
+        public async Task<ActionResult> Populate(string SearchString, string Protocol) {
             //get data from omdbapi.com
             var httpHelper = new HttpServices();
-            var movies = httpHelper.GetMovies(SearchString, Protocol);
-            Trace.TraceInformation("WER >>> New item count {0}", movies.Count );
-            if (movies != null)
-            {
+            var movies = httpHelper.GetMoviesInfo(SearchString, Protocol);
+            Trace.TraceInformation("WER >>> Retrieved {0} movies", movies.Count );
+            if (movies != null){
                 //add movies to SQL database
-                await dc.AddRangeAsync(movies);
+                await dataProvider.AddRangeAsync(movies);
+
                 //send msg to queue
-                azureSub.SendMessages("Create", movies);
+                cloudServiceProvider.SendMessages("Create", movies);
 
                 //return view with data
-                return View("Index", await dc.ToListAsync());
+                return View("Index", await dataProvider.ToListAsync());
             } else {
                 return View();
             }
@@ -80,7 +80,7 @@ namespace omdbWeb.Controllers
         {
             //Accendig sort for item, using OrderbyDescending for DESC sort
             //var movies = db.Movies.OrderBy(mv => mv.imdbID);
-            return View(await dc.ToListAsync());
+            return View(await dataProvider.ToListAsync());
         }
 
         // GET: Movies/Details/5
@@ -89,7 +89,7 @@ namespace omdbWeb.Controllers
                 return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
             }
 
-            Movie movie = await dc.FindAsync(id);
+            Movie movie = await dataProvider.FindAsync(id);
             if (movie == null){
                 return HttpNotFound();
             }
@@ -110,7 +110,7 @@ namespace omdbWeb.Controllers
         public async Task<ActionResult> Create([Bind(Include = "MovieId,Title,Type,Year,imdbID,Poster,ImageURL,ThumbnailURL")] Movie movie)
         {
             if (ModelState.IsValid) {
-                await dc.AddAsync(movie);
+                await dataProvider.AddAsync(movie);
                 return RedirectToAction("Index");
             }
 
@@ -124,7 +124,7 @@ namespace omdbWeb.Controllers
             {
                 return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
             }
-            Movie movie = await dc.FindAsync(id);
+            Movie movie = await dataProvider.FindAsync(id);
             if (movie == null)
             {
                 return HttpNotFound();
@@ -141,24 +141,24 @@ namespace omdbWeb.Controllers
         {
             if (ModelState.IsValid)
             {
-               await dc.SetEntityState(movie, EntityState.Modified);
+               await dataProvider.SetEntityState(movie, EntityState.Modified);
                return RedirectToAction("Index");
             }
             return View(movie);
         }
 
         // GET: Movies/Delete/5
-        public async Task<ActionResult> Delete(int? id)
-        {
-            if (id == null)
-            {
+        public async Task<ActionResult> Delete(int? id){
+            if (id == null){
                 return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
             }
-            Movie movie = await dc.FindAsync(id);
-            if (movie == null)
-            {
+
+            Movie movie = await dataProvider.FindAsync(id);
+            if (movie == null){
                 return HttpNotFound();
             }
+
+            //show confirm window
             return View(movie);
         }
 
@@ -167,18 +167,21 @@ namespace omdbWeb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<ActionResult> DeleteConfirmed(int id)
         {
-            Movie movie = await dc.FindAsync(id);
-            dc.Remove(movie);
-            azureSub.SendDeleteMessages(Action.Delete, movie.ImageURL, movie.ThumbnailURL);
-            await dc.SaveChangesAsync();
+            //remove movie in db
+            Movie movie = await dataProvider.FindAsync(id);
+            dataProvider.Remove(movie);
+
+            //send delete images request to worker
+            cloudServiceProvider.SendDeleteMessages(Action.Delete, movie.ImageURL, movie.ThumbnailURL);
+
+            await dataProvider.SaveChangesAsync();
             return RedirectToAction("Index");
         }
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing)
-            {
-                dc.Dispose();
+            if (disposing){
+                dataProvider.Dispose();
             }
             base.Dispose(disposing);
         }
