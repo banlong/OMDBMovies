@@ -15,6 +15,8 @@ namespace omdbCommon
         //API string to get the poster from source site
         public static string imdbApiStr = "http://www.omdbapi.com/?s={0}&r={1}";
 
+       
+
     }
 
     //STORE DEFINITION OF THE CONNECTION STRINGS IN THE APP

@@ -14,18 +14,23 @@ namespace omdbWeb.Controllers
 
         //Data provider
         private DataProvider dataProvider = new DataProvider(ConnectionStrings.GetConnStrs());
+        
 
         // GET: Movies/Search
         public ActionResult Search(){
             return View();
         }
 
+        
         [HttpPost]
         public async Task<ActionResult> Search(SubmitData message) {
+            Trace.WriteLine(TraceInfo.ShortTime + "WER >>> Start searching movie");
             if (message.Title == null & message.Type == null & message.Year == null) {
-                
                 //return full list if there is no input
-                return View(await dataProvider.ToListAsync());
+                var result = await dataProvider.ToListAsync();
+                Trace.WriteLine(TraceInfo.ShortTime + "WER >>> Search ended");
+
+                return View();
                 
             } else {
                 var ret = dataProvider.Search(message);
@@ -34,6 +39,7 @@ namespace omdbWeb.Controllers
                 if (ret.Count == 0){
                   ModelState.AddModelError("NotFound", "Movie not found");
                 }
+                Trace.WriteLine(TraceInfo.ShortTime + "WER >>> Search ended");
                 return View(ret);
             }
         }
@@ -45,6 +51,7 @@ namespace omdbWeb.Controllers
 
             //send delete all request
             cloudServiceProvider.SendDeleteMessages(Action.DeleteAll);
+            Trace.WriteLine(TraceInfo.ShortTime + "WER >>> Delete request sent");
             return View("Index", await dataProvider.ToListAsync());
         }
 
@@ -60,13 +67,16 @@ namespace omdbWeb.Controllers
             //get data from omdbapi.com
             var httpHelper = new HttpServices();
             var movies = httpHelper.GetMoviesInfo(SearchString, Protocol);
-            Trace.TraceInformation("WER >>> Retrieved {0} movies", movies.Count );
+            Trace.WriteLine(TraceInfo.ShortTime + "WER >>> Retrieved " + movies.Count + " movies");
             if (movies != null){
                 //add movies to SQL database
                 await dataProvider.AddRangeAsync(movies);
+                Trace.WriteLine(TraceInfo.ShortTime + "WER >>> Movie entries saved");
 
                 //send msg to queue
+                Trace.WriteLine(TraceInfo.ShortTime + "WER >>> Start sending 'create' messages");
                 cloudServiceProvider.SendMessages("Create", movies);
+                Trace.WriteLine(TraceInfo.ShortTime + "WER >>> End sending 'create' messages");
 
                 //return view with data
                 return View("Index", await dataProvider.ToListAsync());
@@ -85,6 +95,7 @@ namespace omdbWeb.Controllers
 
         // GET: Movies/Details/5
         public async Task<ActionResult> Details(int? id){
+            Trace.WriteLine(TraceInfo.ShortTime + "WER >>> Start getting movie detail");
             if (id == null){
                 return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
             }
@@ -93,6 +104,7 @@ namespace omdbWeb.Controllers
             if (movie == null){
                 return HttpNotFound();
             }
+            Trace.WriteLine(TraceInfo.ShortTime + "WER >>> Complete getting movie detail");
             return View(movie);
         }
 
@@ -167,12 +179,16 @@ namespace omdbWeb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<ActionResult> DeleteConfirmed(int id)
         {
+            Trace.WriteLine(TraceInfo.ShortTime + "WER >>> Start removing movie entries");
             //remove movie in db
             Movie movie = await dataProvider.FindAsync(id);
             dataProvider.Remove(movie);
+            Trace.WriteLine(TraceInfo.ShortTime + "WER >>> End removing movie entries");
 
+            Trace.WriteLine(TraceInfo.ShortTime + "WER >>> Start sending delete request");
             //send delete images request to worker
             cloudServiceProvider.SendDeleteMessages(Action.Delete, movie.ImageURL, movie.ThumbnailURL);
+            Trace.WriteLine(TraceInfo.ShortTime + "WER >>> Delete request sent");
 
             await dataProvider.SaveChangesAsync();
             return RedirectToAction("Index");

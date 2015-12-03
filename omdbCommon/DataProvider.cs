@@ -19,7 +19,7 @@ namespace omdbCommon {
             dbConnString = cons["SqlConnString"];
             db = new MoviesContext(dbConnString);
             Movies = db.Movies;
-
+            
         }
 
 
@@ -51,11 +51,9 @@ namespace omdbCommon {
 
         //REMOVE DUPLICATED DATA IN DB
         public void RemoveDuplicate(int movieId){
-            Trace.TraceInformation("WKR >>> Duplicate movies detected");
             Movie m = GetMovie(movieId);
             Movies.Remove(m);
             db.SaveChanges();
-            Trace.TraceInformation("WKR >>> Redundant item removed");
         }
 
         //UPDATE URLS IN DB
@@ -68,7 +66,6 @@ namespace omdbCommon {
             movie.ImageURL = urls["imageURL"];
             movie.ThumbnailURL = urls["thumbURL"];
             db.SaveChanges();
-            Trace.TraceInformation("WKR >>> URLs updated");
         }
 
         //EXECUTE SQL COMMAND
@@ -113,7 +110,9 @@ namespace omdbCommon {
 
         //REMOVE A MOVIE FROM DB
         public void Remove(Movie m){
-            db.Movies.Remove(m);
+            if (m != null) {
+                db.Movies.Remove(m);
+            }
         }
 
 

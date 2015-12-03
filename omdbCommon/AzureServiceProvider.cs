@@ -26,8 +26,8 @@ namespace omdbCommon
         
 
         //CONSTRUCTOR
-        public AzureServiceProvider(Dictionary<string, string> cons)
-        {
+        public AzureServiceProvider(Dictionary<string, string> cons) {
+            
             busConnString = cons["BusConnString"];
             storageConnString = cons["StorageConnString"];
             storageAccount = CloudStorageAccount.Parse(storageConnString);
@@ -41,8 +41,6 @@ namespace omdbCommon
         public void SendMessages(string act, List<Movie> movies){
 
             foreach (Movie m in movies){
-                Trace.TraceInformation("WER >>> Created queue message for movieId {0}", m.MovieId);
-
                 // Create message, passing a string message for the body.
                 BrokeredMessage message = new BrokeredMessage(AppConfiguration.ApplicationId);
 
@@ -55,14 +53,12 @@ namespace omdbCommon
 
                 // Send message to the queue.
                 QClient.Send(message);
-                Trace.TraceInformation("WER >>> Message sent");
+                
             }
         }
 
         //SEND MESSAGE TO QUEUE - REQUEST to delete thumbnails & posters
         public void SendDeleteMessages(Action act, string blobUrl = "", string thumbUrl = ""){
-            Trace.TraceInformation("WER >>> Created deleting request message");
-
             // Create message, passing a string message for the body.
             BrokeredMessage message = new BrokeredMessage(AppConfiguration.ApplicationId);
 
@@ -73,29 +69,28 @@ namespace omdbCommon
 
             // Send message to the queue.
             QClient.Send(message);
-            Trace.TraceInformation("WER >>> Message sent");
-
         }
 
         //GET QUEUE REFERENCE
         private void CreateQueue(string queueName){
             //Create the queue if it does not exist already
-            Trace.TraceInformation("COM >>> Creating images queue");
+            Trace.TraceInformation("{0}Initializing queue reference", TraceInfo.ShortTime);
             var namespaceManager = NamespaceManager.CreateFromConnectionString(busConnString);
             if (!namespaceManager.QueueExists(queueName))
             {
                 namespaceManager.CreateQueue(queueName);
+                Trace.TraceInformation("{0}Queue created", TraceInfo.ShortTime);
             }
 
             //Set the client of the queue
             QClient = QueueClient.CreateFromConnectionString(busConnString, queueName);
+            Trace.TraceInformation("{0}Queue reference created", TraceInfo.ShortTime);
 
-            Trace.TraceInformation("COM >>> Queue created");
         }
 
         //CREAT THE CONTAINER FOR IMAGE
         private void CreateContainer() { 
-            Trace.TraceInformation("WKR >>> Creating images blob container");
+            Trace.TraceInformation("{0}Initializing images blob container", TraceInfo.ShortTime);
 
             if (container.CreateIfNotExists()) {
                 // Enable public access on the newly created "images" container.
@@ -104,9 +99,10 @@ namespace omdbCommon
                     {
                         PublicAccess = BlobContainerPublicAccessType.Blob
                     });
+                Trace.TraceInformation("{0}Container created", TraceInfo.ShortTime);
             }
 
-            Trace.TraceInformation("WKR >>> Container initialized");
+            Trace.TraceInformation("{0}Container initialized", TraceInfo.ShortTime);
         }
 
         //CREATE IMAGE BLOBS FROM INPUT STREAM
@@ -129,7 +125,6 @@ namespace omdbCommon
             }
 
             //CREATE THUMBBLOB FROM POSTERBLOB
-            Trace.TraceInformation("WKR >>> Generates thumbnail in blob {0}", thumbName);
             using (Stream input = mStream, output = thumbBlob.OpenWrite())
             {
                 ConvertImageToThumbnailJPG(input, output);
@@ -207,11 +202,11 @@ namespace omdbCommon
             //Delete images
             CloudBlockBlob imageBlob = container.GetBlockBlobReference(imageName);
             CloudBlockBlob thumbBlob = container.GetBlockBlobReference(thumbName);
-            Trace.TraceInformation("COM >>> Start deleting {0}", imageName);
+            Trace.WriteLine(TraceInfo.ShortTime + "WKR >>> Deleting " + imageName);
             imageBlob.DeleteIfExistsAsync();
-            Trace.TraceInformation("COM >>> Start deleting {0}", thumbName);
+            Trace.WriteLine(TraceInfo.ShortTime + "WKR >>> Deleting " + thumbName);
             thumbBlob.DeleteIfExistsAsync();
-            Trace.TraceInformation("COM >>> Complete deleting");
+            Trace.TraceInformation("Complete deleting");
         }
     }
 
