@@ -9,6 +9,7 @@ namespace omdbCommon
 {
     public interface IMovieParser {
         List<Movie> Parse(HttpWebResponse httpWebResponse);
+        
     }
 
     //DATA PARSER: XML RESULT INTO MOVIES
@@ -38,13 +39,16 @@ namespace omdbCommon
 
     //DATA PARSER: JSON RESULT INTO MOVIES
     public class JSONMovieParser : IMovieParser {
-        public List<Movie> Parse(HttpWebResponse webResponse) {
+        public List<Movie> Parse(HttpWebResponse webResponse)
+        {
             List<Movie> ret = new List<Movie>();
 
-            using (var reader = new StreamReader(webResponse.GetResponseStream())) {
+            using (var reader = new StreamReader(webResponse.GetResponseStream()))
+            {
                 JavaScriptSerializer js = new JavaScriptSerializer();
                 var data = js.Deserialize<dynamic>(reader.ReadToEnd());
-                foreach (var dataObj in data["Search"]) {
+                foreach (var dataObj in data["Search"])
+                {
                     Movie newMovie = new Movie();
                     newMovie.Title = dataObj["Title"];
                     newMovie.Year = dataObj["Year"];
@@ -57,7 +61,12 @@ namespace omdbCommon
 
             return ret;
         }
+
+
     }
+
+
+
 
     //DATA HELPER: RETURN THE TYPE OF MOVIE
     public static class DataHelper {

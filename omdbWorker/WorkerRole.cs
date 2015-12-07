@@ -20,7 +20,7 @@ namespace omdbWorker
         
 
         //public override void Run(){
-        //    Trace.WriteLine("WKR >>> Starting processing of message queue");         
+        //    Trace.TraceInformation("WKR >>> Starting processing of message queue");         
         //    BrokeredMessage msg = null;
         //    //Receiving message in Azure Queue
         //    while (true){
@@ -40,14 +40,14 @@ namespace omdbWorker
         //}
 
         public override void Run(){
-            Trace.WriteLine(TraceInfo.ShortTime + "WKR >>> Start receiving of messages");
+            Trace.TraceInformation(TraceInfo.ShortTime + "WKR >>> Start receiving of messages");
 
             // Initiates the message pump and callback is invoked for each message that is received, calling close on the client will stop the pump.
             azureServiceProvider.QClient.OnMessage((receivedMessage) =>
             {
                 try {
                     // Process the message
-                    Trace.WriteLine(TraceInfo.ShortTime + "WKR >>> Processing message: " + receivedMessage.SequenceNumber.ToString());
+                    Trace.TraceInformation(TraceInfo.ShortTime + "WKR >>> Processing message: " + receivedMessage.SequenceNumber.ToString());
                     ProcessQueueMessage(receivedMessage);
                 } catch {
                     // Handle any message processing specific exceptions here
@@ -66,10 +66,10 @@ namespace omdbWorker
             //start setup of Azure & Data Context
             var cons = ConnectionStrings.GetConnStrs();
             azureServiceProvider = new AzureServiceProvider(cons);
-            Trace.WriteLine(TraceInfo.ShortTime + "WKR >>> Storage initialized");
+            Trace.TraceInformation(TraceInfo.ShortTime + "WKR >>> Storage initialized");
 
             dataProvider = new DataProvider(cons);
-            Trace.WriteLine(TraceInfo.ShortTime + "WKR >>> Database Context established");
+            Trace.TraceInformation(TraceInfo.ShortTime + "WKR >>> Database Context established");
             return base.OnStart();
         }
 
@@ -132,10 +132,10 @@ namespace omdbWorker
             //CHECK - if there is more than one imdbId found (ie duplicate movies info), delete duplicate records
             else if (imdbCount > 1){
                 //remove duplicate item
-                Trace.WriteLine(TraceInfo.ShortTime + "WKR >>> Duplicate movies detected");
+                Trace.TraceInformation(TraceInfo.ShortTime + "WKR >>> Duplicate movies detected");
                 dataProvider.RemoveDuplicate(movieId);
                 msg.Complete();
-                Trace.WriteLine(TraceInfo.ShortTime + "WKR >>> Duplicate message was deleted.");
+                Trace.TraceInformation(TraceInfo.ShortTime + "WKR >>> Duplicate message was deleted.");
                 return;
             } else if (imdbCount == 1) {
 
@@ -143,22 +143,22 @@ namespace omdbWorker
                 //HttpSevice provides service of download, save, convert image to stream
                 HttpServices httpHelper = new HttpServices();
 
-                Trace.WriteLine(TraceInfo.ShortTime + "WKR >>> Downloads poster from remote web site");
+                Trace.TraceInformation(TraceInfo.ShortTime + "WKR >>> Downloads poster from remote web site");
                 var mStream = httpHelper.GetImageStream(remoteFileUrl);
 
                 //DEFINE BLOB NAME
-                Trace.WriteLine(TraceInfo.ShortTime + "WKR >>> Creating thumbnail");
+                Trace.TraceInformation(TraceInfo.ShortTime + "WKR >>> Creating thumbnail");
                 Uri blobUri = new Uri(remoteFileUrl);
                 string blobName = blobUri.Segments[blobUri.Segments.Length - 1];
                 var urls = azureServiceProvider.SaveImagesToContainer(mStream, blobName);
-                Trace.WriteLine(TraceInfo.ShortTime + "WKR >>> Saved poster & thumbnail to Azure");
+                Trace.TraceInformation(TraceInfo.ShortTime + "WKR >>> Saved poster & thumbnail to Azure");
 
                 //UPDATE THE URL IN SQL DB
                 dataProvider.UpdateImageURL(urls, imdbId);
-                Trace.WriteLine(TraceInfo.ShortTime + "WKR >>> Updated urls for poster & thumbnail.");
+                Trace.TraceInformation(TraceInfo.ShortTime + "WKR >>> Updated urls for poster & thumbnail.");
 
                 msg.Complete();
-                Trace.WriteLine(TraceInfo.ShortTime + "WKR >>> Message process completed");
+                Trace.TraceInformation(TraceInfo.ShortTime + "WKR >>> Message process completed");
 
                 mStream.Dispose();
                 mStream = null;

@@ -17,7 +17,7 @@ namespace omdbCommon
     //THIS CLASS PROVIDES USERS ABILITIES TO INTERACTIVE WITH THE AZURE ACCOUNT
     //Users can create queue, add/delete blobs, send/receive messages
     public class AzureServiceProvider{
-
+        
         private string busConnString, storageConnString;
         private CloudStorageAccount storageAccount;
         public QueueClient QClient;
@@ -202,9 +202,9 @@ namespace omdbCommon
             //Delete images
             CloudBlockBlob imageBlob = container.GetBlockBlobReference(imageName);
             CloudBlockBlob thumbBlob = container.GetBlockBlobReference(thumbName);
-            Trace.WriteLine(TraceInfo.ShortTime + "WKR >>> Deleting " + imageName);
+            Trace.TraceInformation(TraceInfo.ShortTime + "WKR >>> Deleting " + imageName);
             imageBlob.DeleteIfExistsAsync();
-            Trace.WriteLine(TraceInfo.ShortTime + "WKR >>> Deleting " + thumbName);
+            Trace.TraceInformation(TraceInfo.ShortTime + "WKR >>> Deleting " + thumbName);
             thumbBlob.DeleteIfExistsAsync();
             Trace.TraceInformation("Complete deleting");
         }

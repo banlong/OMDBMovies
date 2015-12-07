@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "omdbWorker", "omdbWorker\om
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "omdbCommon", "omdbCommon\omdbCommon.csproj", "{F13A9924-CEEE-48EE-9817-DC7A96E8703F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JsonSerialize", "JsonSerialize\JsonSerialize.csproj", "{1A535437-87FA-4E73-8AD2-E7EF3A675314}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{F13A9924-CEEE-48EE-9817-DC7A96E8703F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F13A9924-CEEE-48EE-9817-DC7A96E8703F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F13A9924-CEEE-48EE-9817-DC7A96E8703F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1A535437-87FA-4E73-8AD2-E7EF3A675314}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1A535437-87FA-4E73-8AD2-E7EF3A675314}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1A535437-87FA-4E73-8AD2-E7EF3A675314}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1A535437-87FA-4E73-8AD2-E7EF3A675314}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
